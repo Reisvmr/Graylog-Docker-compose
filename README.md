@@ -31,7 +31,7 @@ O registro público do Docker, o Docker Hub, inclui uma imagem do Hello World pa
 
 ### Primeiramente, vamos criar um diretório para o arquivo YAML e mover para ele:
 ```
-    apt install docker
+    apt  install docker.io
     mkdir Graylog-Docker-compose
     cd Graylog-Docker-compose
     apt install git 
