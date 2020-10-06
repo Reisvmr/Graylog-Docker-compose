@@ -29,8 +29,14 @@ Passo 2 — Como executar um Contêiner com o Docker Compose
 
 O registro público do Docker, o Docker Hub, inclui uma imagem do Hello World para demonstração e teste. Ele ilustra a configuração mínima necessária para executar um contêiner utilizando o Docker Compose: um arquivo YAML que chama uma única imagem:
 
-Primeiramente, vamos criar um diretório para o arquivo YAML e mover para ele:
+### Primeiramente, vamos criar um diretório para o arquivo YAML e mover para ele:
 ```
-    mkdir hello-world
-    cd hello-world
+    mkdir Graylog-Docker-compose
+
+    cd Graylog-Docker-compose
+    apt install git 
+    git clone 
+    
 ```
+-----------------
+
