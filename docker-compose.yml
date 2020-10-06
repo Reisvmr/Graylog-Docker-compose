@@ -65,6 +65,7 @@ services:
       # SW-Syslog2_UDP
       - 514:514/udp
 # Volumes for persisting data, see https://docs.docker.com/engine/admin/volumes/volumes/
+#Caminho dos volumes:"/var/lib/docker/volumes/
 volumes:
   mongo_data:
     driver: local
