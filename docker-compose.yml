@@ -29,7 +29,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    mem_limit: 1g
+    mem_limit: 1g # este limidador pode ser alterado dependendo do projeto.
   # Graylog: https://hub.docker.com/r/graylog/graylog/
   graylog:
     image: graylog/graylog:3.3
