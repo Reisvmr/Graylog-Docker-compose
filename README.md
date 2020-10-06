@@ -35,7 +35,8 @@ O registro público do Docker, o Docker Hub, inclui uma imagem do Hello World pa
 
     cd Graylog-Docker-compose
     apt install git 
-    git clone 
+    git clone git@github.com:Reisvmr/Graylog-Docker-compose.git
+    docker-compose up -d --build
     
 ```
 -----------------
