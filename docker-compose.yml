@@ -64,6 +64,8 @@ services:
       - 12201:12201/udp
       # SW-Syslog2_UDP
       - 514:514/udp
+      Palo_Alto_SYSLOG
+      - 10514:10514/udp
 # Volumes for persisting data, see https://docs.docker.com/engine/admin/volumes/volumes/
 #Caminho dos volumes:"/var/lib/docker/volumes/
 volumes:
