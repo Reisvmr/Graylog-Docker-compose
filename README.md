@@ -40,4 +40,131 @@ O registro público do Docker, o Docker Hub, inclui uma imagem do Hello World pa
     
 ```
 -----------------
+# Configuração de encaminhamento RSyslog
 
+## Visão geral
+Estou procurando centralizar o registro para nossa equipe de desenvolvimento no Elasticsearch via Logstash. O problema é que não somos uma loja de Java, portanto, instalar o java em nossos hosts apenas para enviar os logs de volta a um indexador Logstash central é algo que gostaríamos de evitar. Portanto, estou abordando as coisas como uma chance de entender o RSyslog e seus recursos como remetente de logs.
+
+## Procedimento
+
+### Configurar escuta de TCP no host de índice de log
+
+Remova o comentário das seguintes linhas em `/ etc / rsyslog.conf`. Isso permitirá que o daemon rsyslog escute as solicitações de entrada na porta TCP 514. Estamos usando o TCP aqui para que possamos ter alguma confiança de que as mensagens dos hosts do agente alcançam o indexador. (Mais sobre isso abaixo)
+
+`` `
+# Fornece recepção de syslog TCP
+$ ModLoad imtcp
+$ InputTCPServerRun 514
+`` `
+
+Adicione uma linha a `/ etc / rsyslog.conf` para realmente colocar os logs recebidos em um arquivo específico.
+
+`` `
+local3. * / local / logs / httpd-error
+local4. * / local / logs / httpd-access
+`` `
+
+Finalmente, reinicie o processo rsyslog.
+
+`` `bash
+reiniciar serviço rsyslog
+`` `
+
+### Configure o host do agente
+
+No host do agente, o host que está executando o apache, adicione um arquivo, `/ etc / rsyslog.d / apache.conf`. Isso será lido na hora de início do syslog. Este arquivo diz ao rsyslog para ler `/ var / log / httpd / error_log` (o log de erro padrão do apache no CentOS) a cada 10 segundos e enviar suas mensagens para o recurso` local3.info` no syslog. (Expandido para também ler logs de acesso e enviá-los para `local4.info`)
+
+`` `
+$ ModLoad imfile
+
+# Log de erro padrão do Apache
+$ InputFileName / var / log / httpd / error_log
+$ InputFileTag httpd-error-default:
+$ InputFileStateFile stat-httpd-error
+Informação de $ InputFileSeverity
+$ InputFileFacility local3
+$ InputRunFileMonitor
+
+# Registro de acesso padrão do Apache
+$ InputFileName / var / log / httpd / access_log
+$ InputFileTag httpd-access-default:
+$ InputFileStateFile stat-httpd-access
+Informação de $ InputFileSeverity
+$ InputFileFacility local4
+$ InputRunFileMonitor
+
+$ InputFilePollInterval 10
+
+`` `
+
+Em seguida, modifique `/ etc / rsyslog.conf`, descomente ou adicione as seguintes linhas ao final do arquivo. Isso diz ao rsyslog para configurar uma fila de log e encaminhar qualquer mensagem de log de instalação `local3` e` local4` para a porta TCP 192.168.10.11. `@@` é uma abreviação de rsyslog para a porta syslog TCP. Se você deseja encaminhar via UDP, use um único `@` ao invés. No entanto, provavelmente não vale a pena configurar a fila nesse caso, pois o rsyslog não tem uma maneira de garantir que os pacotes UDP sejam recebidos pelo host de índice.
+
+Nesta configuração, o host do agente armazenará todas as mensagens de log que não podem ser enviadas ao host de índice. Isso é bom para lidar com momentos em que o host de índice está sendo reinicializado ou, de outra forma, indisponível.
+
+`` `
+$ WorkDirectory / var / lib / rsyslog # onde colocar os arquivos de spool
+$ ActionQueueFileName fwdRule1 # prefixo de nome exclusivo para arquivos de spool
+$ ActionQueueMaxDiskSpace 1g # 1gb limite de espaço (use o máximo possível)
+$ ActionQueueSaveOnShutdown ao # salvar mensagens no disco ao desligar
+$ ActionQueueType LinkedList # executado de forma assíncrona
+$ ActionResumeRetryCount -1 # tentativas infinitas se o host estiver inativo
+local3. * @@ 192.168.10.11
+local4. * @@ 192.168.10.11
+`` `
+
+Por último, reinicie rsyslog no host do agente.
+
+`` `bash
+reiniciar serviço rsyslog
+`` `
+
+### Teste a configuração
+
+Agora, se você reiniciar o servidor apache (`service httpd restart`), você deve ver os logs sendo gerados em` / local / logs / httpd-error` no host de índice. Caso contrário, verifique se há algum bloqueio de firewall entre os hosts e se as alterações de configuração do rsyslog estão sendo analisadas corretamente. Você pode verificar a configuração do rsyslog com este comando: `/ sbin / rsyslogd -c5 -f /etc/rsyslog.conf -N1`
+
+### Configure o Logstash para consumir os novos arquivos
+
+Essa configuração usa um analisador grok personalizado para extrair o nível de erro da mensagem, bem como extrair a tag que definimos na configuração do rsyslog para seu próprio campo. Para obter ajuda com filtros de grok personalizados, verifique http://grokdebug.herokuapp.com/
+
+`` `
+entrada {
+  Arquivo {
+    type => "httpd-error-log"
+    path => ["/ local / logs / httpd-error"]
+    sincedb_path => "/ opt / logstash / sincedb-access"
+    discovery_interval => 10
+  }
+
+  Arquivo {
+    type => "httpd-access-log"
+    caminho => ["/ local / logs / httpd-access"]
+    sincedb_path => "/ opt / logstash / sincedb-access"
+    discovery_interval => 10
+  }
+}
+
+filtro {
+  if [type] == "httpd-error-log" {
+    grok {
+      match => ["mensagem", "\ S + \ d + \ d +: \ d +: \ d +% {HOSTNAME}% {NOTSPACE: tag}: \ [% {DAY}% {MONTH}% {MONTHDAY}% {TIME} % {YEAR} \] \ [% {LOGLEVEL: nível} \]% {GREEDYDATA} "]
+    }
+    mutate {
+      renomear => ["programa", "vhost"]
+    }
+  }
+
+  if [type] == "httpd-access-log" {
+    grok {
+      match => ["mensagem", "\ S + \ d + \ d +: \ d +: \ d +% {HOSTNAME}% {NOTSPACE: tag}:% {COMBINEDAPACHELOG}"]
+      add_field => {"level", "info"}
+    }
+  }
+}
+
+resultado {
+  elasticsearch {
+    host => "localhost"
+  }
+}
+
+`` `
