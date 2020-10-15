@@ -52,18 +52,18 @@ O registro público do Docker, o Docker Hub, inclui uma imagem do Hello World pa
 
 Remova o comentário das seguintes linhas em `/etc/rsyslog.conf`. Isso permitirá que o daemon rsyslog escute as solicitações de entrada na porta TCP514. Estamos usando o TCP aqui para que possamos ter alguma confiança de que as mensagens dos hosts do agente alcançam o indexador. (Mais sobre isso abaixo)
 
-`` `
+```
 # Fornece recepção de syslog TCP
-$ ModLoad imtcp
-$ InputTCPServerRun 514
-`` `
+$ModLoad imtcp
+$InputTCPServerRun 514
+```
 
 Adicione uma linha a `/etc/rsyslog.conf` para realmente colocar os logs recebidos em um arquivo específico.
 
-`` `
-local3. * /local/logs/httpd-error
-local4. * /local/logs/httpd-access
-`` `
+```
+local3.* /local/logs/httpd-error
+local4.* /local/logs/httpd-access
+```
 
 Finalmente, reinicie o processo rsyslog.
 
