@@ -75,7 +75,7 @@ Finalmente, reinicie o processo rsyslog.
 
 No host do agente, o host que está executando o apache, adicione um arquivo, `/etc/rsyslog.d/apache.conf`. Isso será lido na hora de início do syslog. Este arquivo diz ao rsyslog para ler `/var/log/httpd/error_log` (o log de erro padrão do apache no CentOS) ou `/var/log/apache2/error.log` (o log de erro padrão do apache no Ubuntu/Debian)a cada 10 segundos e enviar suas mensagens para o recurso` local3.info` no syslog. (Expandido para também ler logs de acesso e enviá-los para `local4.info`)
 
-```
+
 ```
 $ModLoad imfile
 
